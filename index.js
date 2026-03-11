@@ -10,10 +10,19 @@ const cors = require('cors');
 
 const axios = require('axios');
 
-// Resilience for Render: Inject browser headers globally to bypass YouTube 429 errors
-axios.defaults.headers.common['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+// Ultra-Resilience for Render: Comprehensive browser impersonation
+axios.defaults.headers.common['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+axios.defaults.headers.common['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
 axios.defaults.headers.common['Accept-Language'] = 'en-US,en;q=0.9';
 axios.defaults.headers.common['Referer'] = 'https://www.youtube.com/';
+axios.defaults.headers.common['sec-ch-ua'] = '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"';
+axios.defaults.headers.common['sec-ch-ua-mobile'] = '?0';
+axios.defaults.headers.common['sec-ch-ua-platform'] = '"Windows"';
+axios.defaults.headers.common['sec-fetch-dest'] = 'document';
+axios.defaults.headers.common['sec-fetch-mode'] = 'navigate';
+axios.defaults.headers.common['sec-fetch-site'] = 'same-origin';
+axios.defaults.headers.common['sec-fetch-user'] = '?1';
+axios.defaults.headers.common['upgrade-insecure-requests'] = '1';
 
 const app = express();
 const server = http.createServer(app);
@@ -125,8 +134,9 @@ function startKick(channelName, sourceData) {
 
 function startYoutube(videoId, sourceData, attempt = 0) {
     try {
-        // High interval (12s) to avoid Render IP rate-limiting
-        const liveChat = new LiveChat({ liveId: videoId }, 12000); 
+        // Increased interval (15s) with jitter to avoid Render IP rate-limiting
+        const interval = 15000 + Math.floor(Math.random() * 3000);
+        const liveChat = new LiveChat({ liveId: videoId }, interval); 
         sourceData.instance = liveChat;
 
         liveChat.on('chat', (chatItem) => {
@@ -138,16 +148,26 @@ function startYoutube(videoId, sourceData, attempt = 0) {
             console.error(`YT Error [${videoId}]:`, err.message);
             
             // Notify clients about the error
-            const errorMsg = err.message.includes('429') 
-                ? "YouTube Rate Limit reached. Retrying in a few seconds..." 
+            const isRateLimit = err.message.includes('429');
+            const errorMsg = isRateLimit 
+                ? "YouTube Rate Limit. Retrying in background..." 
                 : `YouTube Error: ${err.message}`;
             
             sourceData.rooms.forEach(room => io.to(room).emit('system_error', errorMsg));
 
-            // Handle 429 with retry
-            if (err.message.includes('429') && attempt < 5) {
-                const delay = Math.pow(2, attempt) * 5000; // Exponential backoff
-                console.log(`Retrying YT [${videoId}] in ${delay}ms (Attempt ${attempt + 1})`);
+            // Handle 429 with persistent retry (no attempt limit for "idc how" working)
+            if (isRateLimit) {
+                const backoff = Math.min(Math.pow(2, attempt) * 10000, 60000); // Max 1 min wait
+                const jitter = Math.floor(Math.random() * 5000);
+                const delay = backoff + jitter;
+
+                console.log(`Rate Limit! Retrying YT [${videoId}] in ${delay}ms (Prev attempts: ${attempt})`);
+                
+                // Clean up old instance before retrying
+                if (sourceData.instance) {
+                    try { sourceData.instance.stop(); } catch(e) {}
+                }
+
                 setTimeout(() => {
                     startYoutube(videoId, sourceData, attempt + 1);
                 }, delay);
