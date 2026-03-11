@@ -5,6 +5,9 @@ A super-lightweight, premium glassmorphic chat overlay designed for OBS and read
 ## 🚀 One-Click Deployment
 This project is ready for **Render**. Just connect your GitHub repo and it will use the `render.yaml` file to set everything up.
 
+> [!NOTE]
+> We have added a `start.js` file to ensure Render's default `node start` command works correctly alongside `npm start`.
+
 ## 🛠️ Local Setup
 1. Install dependencies: `npm install`
 2. Start the server: `npm start`
