@@ -72,6 +72,8 @@ socket.on('message', (msg) => {
 });
 
 socket.on('system_error', (err) => {
+    const loading = document.getElementById('loading-indicator');
+    if (loading) loading.remove();
     showError(err);
 });
 

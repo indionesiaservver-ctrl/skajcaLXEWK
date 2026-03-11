@@ -8,6 +8,13 @@ const { KickConnection, Events } = require('kick-live-connector');
 const path = require('path');
 const cors = require('cors');
 
+const axios = require('axios');
+
+// Resilience for Render: Inject browser headers globally to bypass YouTube 429 errors
+axios.defaults.headers.common['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+axios.defaults.headers.common['Accept-Language'] = 'en-US,en;q=0.9';
+axios.defaults.headers.common['Referer'] = 'https://www.youtube.com/';
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -116,9 +123,10 @@ function startKick(channelName, sourceData) {
     }
 }
 
-function startYoutube(videoId, sourceData) {
+function startYoutube(videoId, sourceData, attempt = 0) {
     try {
-        const liveChat = new LiveChat({ liveId: videoId });
+        // High interval (12s) to avoid Render IP rate-limiting
+        const liveChat = new LiveChat({ liveId: videoId }, 12000); 
         sourceData.instance = liveChat;
 
         liveChat.on('chat', (chatItem) => {
@@ -126,10 +134,35 @@ function startYoutube(videoId, sourceData) {
             sourceData.rooms.forEach(room => io.to(room).emit('message', msg));
         });
 
-        liveChat.on('error', (err) => console.error(`YT Error [${videoId}]:`, err.message));
-        liveChat.on('end', () => activeSources.delete(videoId));
+        liveChat.on('error', (err) => {
+            console.error(`YT Error [${videoId}]:`, err.message);
+            
+            // Notify clients about the error
+            const errorMsg = err.message.includes('429') 
+                ? "YouTube Rate Limit reached. Retrying in a few seconds..." 
+                : `YouTube Error: ${err.message}`;
+            
+            sourceData.rooms.forEach(room => io.to(room).emit('system_error', errorMsg));
 
-        liveChat.start().catch(err => console.error(`YT Start Failed [${videoId}]:`, err.message));
+            // Handle 429 with retry
+            if (err.message.includes('429') && attempt < 5) {
+                const delay = Math.pow(2, attempt) * 5000; // Exponential backoff
+                console.log(`Retrying YT [${videoId}] in ${delay}ms (Attempt ${attempt + 1})`);
+                setTimeout(() => {
+                    startYoutube(videoId, sourceData, attempt + 1);
+                }, delay);
+            }
+        });
+
+        liveChat.on('end', () => {
+             console.log(`YT Stream Ended [${videoId}]`);
+             activeSources.delete(videoId);
+        });
+
+        liveChat.start().catch(err => {
+            console.error(`YT Start Failed [${videoId}]:`, err.message);
+            sourceData.rooms.forEach(room => io.to(room).emit('system_error', `YT Failed to Start: ${err.message}`));
+        });
     } catch (err) {
         console.error("YT Init Error:", err);
     }
