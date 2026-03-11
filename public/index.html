@@ -127,6 +127,21 @@
             </div>
         </div>
 
+        <!-- Cookie Management Section -->
+        <div style="margin-top: 40px; text-align: left; background: #111; padding: 25px; border-radius: 18px; border: 1px solid #222;">
+            <h3 style="margin-top: 0; font-family: 'Outfit'; display: flex; align-items: center; gap: 10px;">
+                🍪 YouTube Cookie Fix
+                <span style="font-size: 0.7rem; background: #222; padding: 4px 8px; border-radius: 6px; color: #888;">For Render 429 Errors</span>
+            </h3>
+            <p style="font-size: 0.85rem; margin-bottom: 15px;">Paste your YouTube cookies (JSON or raw text) here to bypass rate limits.</p>
+            <textarea id="cookie-input" placeholder='Paste JSON cookies here... [{"name": "VISITOR_INFO1_LIVE", "value": "..."}]' 
+                style="width: 100%; height: 100px; background: #000; color: #fff; border: 1px solid #333; border-radius: 12px; padding: 12px; font-family: monospace; font-size: 0.8rem; resize: vertical; box-sizing: border-box; outline: none; transition: border-color 0.3s;"></textarea>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px;">
+                <span id="cookie-status" style="font-size: 0.8rem; color: #5e81f4;"></span>
+                <button class="btn btn-primary btn-sm" onclick="saveCookie()">Apply Cookie</button>
+            </div>
+        </div>
+
         <div id="results">
             <div class="link-row">
                 <label>🖥️ Merged Dashboard</label>
@@ -206,6 +221,44 @@
             document.getElementById('results').style.display = 'block';
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
+
+        // --- Cookie Management Logic ---
+        const socket = io();
+        const cookieInput = document.getElementById('cookie-input');
+        const cookieStatus = document.getElementById('cookie-status');
+
+        // Load saved cookie from localStorage
+        window.addEventListener('load', () => {
+            const savedCookie = localStorage.getItem('yt_cookie');
+            if (savedCookie) {
+                cookieInput.value = savedCookie;
+                applyCookie(savedCookie);
+            }
+        });
+
+        function saveCookie() {
+            const val = cookieInput.value.trim();
+            if (!val) {
+                localStorage.removeItem('yt_cookie');
+                cookieStatus.innerText = "Cookie cleared.";
+                return;
+            }
+            localStorage.setItem('yt_cookie', val);
+            applyCookie(val);
+        }
+
+        function applyCookie(cookie) {
+            cookieStatus.innerText = "Applying...";
+            socket.emit('update_cookie', { cookie });
+        }
+
+        socket.on('cookie_status', (data) => {
+            if (data.success) {
+                cookieStatus.innerText = "✅ " + data.message;
+                setTimeout(() => cookieStatus.innerText = "", 3000);
+            }
+        });
     </script>
+    <script src="/socket.io/socket.io.js"></script>
 </body>
 </html>

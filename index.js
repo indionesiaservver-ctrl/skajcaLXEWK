@@ -75,6 +75,23 @@ const activeSources = new Map();
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
+    // Dynamic Cookie Update from Web UI
+    socket.on('update_cookie', (data) => {
+        if (!data || !data.cookie) return;
+        let cookieString = data.cookie;
+        
+        try {
+            const parsed = JSON.parse(cookieString);
+            if (Array.isArray(parsed)) {
+                cookieString = parsed.map(c => `${c.name}=${c.value}`).join('; ');
+            }
+        } catch (e) { /* Raw string */ }
+
+        axios.defaults.headers.common['Cookie'] = cookieString;
+        console.log(`YouTube Cookie updated via Web UI from client: ${socket.id}`);
+        socket.emit('cookie_status', { success: true, message: "Cookie applied successfully!" });
+    });
+
     socket.on('join', (data) => {
         let sources = [];
         if (typeof data === 'string') {
