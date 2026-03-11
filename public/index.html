@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TejChat | Unified Stream Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #5e81f4;
+            --bg: #050505;
+            --card: #111;
+            --text: #fff;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 40px;
+            background: var(--card);
+            border-radius: 24px;
+            border: 1px solid #222;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        h1 { 
+            font-family: 'Outfit', sans-serif; 
+            font-size: 3rem; 
+            margin-bottom: 10px; 
+            background: linear-gradient(45deg, #5e81f4, #ff5e62); 
+            -webkit-background-clip: text; 
+            background-clip: text; /* Standard property */
+            -webkit-text-fill-color: transparent; 
+        }
+        p { color: #888; margin-bottom: 30px; line-height: 1.6; }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        input {
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            background: #000;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus { border-color: var(--primary); }
+        .btn {
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: transform 0.2s, opacity 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-secondary { background: #333; color: #fff; margin-top: 10px; }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        #results {
+            margin-top: 30px;
+            display: none;
+            text-align: left;
+            background: #000;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+        .link-row { 
+            margin-bottom: 20px; 
+            background: #111; 
+            padding: 15px; 
+            border-radius: 10px;
+            border: 1px solid #222;
+        }
+        .link-row:last-child { margin-bottom: 0; }
+        .link-row label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .link-row .url-box { 
+            background: #000; 
+            padding: 10px; 
+            border-radius: 6px; 
+            font-family: monospace; 
+            color: var(--primary); 
+            word-break: break-all;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            border: 1px solid #222;
+        }
+        .btn-sm { padding: 8px 16px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TejChat</h1>
+        <p>Merge YouTube, Twitch & Kick into a single professional overlay.</p>
+        
+        <div class="input-group">
+            <div id="sources-container">
+                <div class="source-item" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <select class="yt-platform" style="background: #000; color: #fff; border: 1px solid #333; padding: 12px; border-radius: 12px; font-weight: 600;">
+                        <option value="youtube">YouTube</option>
+                        <option value="twitch">Twitch</option>
+                        <option value="kick">Kick</option>
+                    </select>
+                    <input type="text" class="yt-url" placeholder="URL or ID/Username..." style="flex: 1;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn btn-secondary" onclick="addInput()" style="flex: 1; padding: 16px;">+ Add Source</button>
+                <button class="btn btn-primary" onclick="generate()" style="flex: 2; padding: 16px;">Create Session</button>
+            </div>
+        </div>
+
+        <div id="results">
+            <div class="link-row">
+                <label>🖥️ Merged Dashboard</label>
+                <div class="url-box" id="dashboard-link"></div>
+                <a href="#" id="open-dashboard" target="_blank" class="btn btn-primary btn-sm">Open Merged Dashboard</a>
+            </div>
+
+            <div class="link-row">
+                <label>🎥 Transparent Overlay (OBS)</label>
+                <div class="url-box" id="overlay-link"></div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <a href="#" id="open-overlay" target="_blank" class="btn btn-secondary btn-sm">Test Overlay</a>
+                    <span style="font-size: 0.75rem; color: #666;">Shows all chats in one stream</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addInput() {
+            const container = document.getElementById('sources-container');
+            const div = document.createElement('div');
+            div.className = 'source-item';
+            div.style.display = 'flex';
+            div.style.gap = '10px';
+            div.style.marginBottom = '15px';
+            div.innerHTML = `
+                <select class="yt-platform" style="background: #000; color: #fff; border: 1px solid #333; padding: 12px; border-radius: 12px; font-weight: 600;">
+                    <option value="youtube">YouTube</option>
+                    <option value="twitch">Twitch</option>
+                    <option value="kick">Kick</option>
+                </select>
+                <input type="text" class="yt-url" placeholder="Username or Live URL..." style="flex: 1; min-width: 0;">
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #ff5e62; cursor: pointer; padding: 0 5px; font-size: 1.2rem;">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function extractVideoId(input) {
+            if (!input) return null;
+            // YouTube
+            const ytMatch = input.match(/(?:v=|\/live\/|\/)([a-zA-Z0-9_-]{11})/);
+            if (ytMatch) return ytMatch[1];
+            // Twitch
+            const twitchMatch = input.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
+            if (twitchMatch) return twitchMatch[1];
+            // Kick
+            const kickMatch = input.match(/kick\.com\/([a-zA-Z0-9_]+)/);
+            if (kickMatch) return kickMatch[1];
+            
+            return input.trim();
+        }
+
+        function generate() {
+            const items = document.querySelectorAll('.source-item');
+            const sourceStrings = Array.from(items)
+                .map(item => {
+                    const platform = item.querySelector('.yt-platform').value;
+                    const val = item.querySelector('.yt-url').value.trim();
+                    const id = extractVideoId(val);
+                    return id ? `${platform}:${id}` : null;
+                })
+                .filter(s => s !== null);
+
+            if (sourceStrings.length === 0) return alert("Please enter at least one valid Source");
+
+            const baseUrl = window.location.origin;
+            const sourcesParam = sourceStrings.join(',');
+            const overlayUrl = `${baseUrl}/overlay?sources=${sourcesParam}`;
+            const dashboardUrl = `${baseUrl}/dashboard?sources=${sourcesParam}`;
+
+            document.getElementById('overlay-link').innerText = overlayUrl;
+            document.getElementById('dashboard-link').innerText = dashboardUrl;
+            document.getElementById('open-overlay').href = overlayUrl;
+            document.getElementById('open-dashboard').href = dashboardUrl;
+            
+            document.getElementById('results').style.display = 'block';
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
