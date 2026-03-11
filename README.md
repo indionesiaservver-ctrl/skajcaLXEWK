@@ -5,6 +5,15 @@ A super-lightweight, premium glassmorphic chat overlay designed for OBS and read
 ## 🚀 One-Click Deployment
 This project is ready for **Render**. Just connect your GitHub repo and it will use the `render.yaml` file to set everything up.
 
+> [!IMPORTANT]
+> **Fixing Rate Limits (429 Errors) on Render:**
+> Render's shared IPs are often blocked by YouTube. To fix this, you should provide a YouTube Session Cookie:
+> 1. Open YouTube and log in.
+> 2. Use a browser extension (like "EditThisCookie") to export your cookies in **JSON** format.
+> 3. Add the entire JSON array as an Environment Variable named `YOUTUBE_COOKIE` in your Render Dashboard.
+> 
+> *Note: We support both raw header strings and JSON array formats.*
+
 > [!NOTE]
 > We have added a `start.js` file to ensure Render's default `node start` command works correctly alongside `npm start`.
 

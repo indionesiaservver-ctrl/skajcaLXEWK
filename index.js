@@ -24,6 +24,24 @@ axios.defaults.headers.common['sec-fetch-site'] = 'same-origin';
 axios.defaults.headers.common['sec-fetch-user'] = '?1';
 axios.defaults.headers.common['upgrade-insecure-requests'] = '1';
 
+// Cookie support to bypass 429: Pass YOUTUBE_COOKIE as an env var on Render
+if (process.env.YOUTUBE_COOKIE) {
+    let cookieString = process.env.YOUTUBE_COOKIE;
+    
+    // Check if the cookie is provided as a JSON array (common from browser extensions)
+    try {
+        const parsed = JSON.parse(cookieString);
+        if (Array.isArray(parsed)) {
+            cookieString = parsed.map(c => `${c.name}=${c.value}`).join('; ');
+        }
+    } catch (e) {
+        // Not JSON, use as raw string
+    }
+
+    axios.defaults.headers.common['Cookie'] = cookieString;
+    console.log("YouTube Cookie injected for authenticated session.");
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
